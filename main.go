@@ -165,8 +165,9 @@ package main
 
 import (
 	"wakeonlan/config"
-	turnon "wakeonlan/controllers/TurnOnPc"
 	turnoff "wakeonlan/controllers/TurnOffPc"
+	turnon "wakeonlan/controllers/TurnOnPc"
+	controllers "wakeonlan/controllers/safeExam"
 
 	"github.com/gin-gonic/gin"
 )
@@ -178,7 +179,6 @@ func main() {
 
 	router.GET("/poweron", turnon.PowerOnHandler)
 	router.POST("/shutdown", turnoff.ShutdownHandler)
-
+	router.GET("/launch-seb", controllers.LaunchSEBHandler)
 	router.Run(":8080")
 }
-	
