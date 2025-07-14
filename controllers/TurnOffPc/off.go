@@ -15,9 +15,7 @@ type PC struct {
 	Username     string
 	Password     string
 }
-
 func ShutdownHandler(c *gin.Context) {
-	// Fetch all PCs from DB
 	rows, err := config.DB.Query(`
 		SELECT name, ip_address, computer_name, username, password
 		FROM pcs
@@ -41,26 +39,41 @@ func ShutdownHandler(c *gin.Context) {
 	results := make(map[string]interface{})
 
 	for _, pc := range pcs {
-	
-		cmd := exec.Command(
+		// Step 1: Authenticate with net use
+		netUseCmd := exec.Command("net", "use", fmt.Sprintf(`\\%s`, pc.IPAddress), fmt.Sprintf("/user:%s", pc.Username), pc.Password)
+		netUseOutput, netUseErr := netUseCmd.CombinedOutput()
+
+		if netUseErr != nil {
+			results[pc.Name] = gin.H{
+				"status": "net use failed",
+				"error":  netUseErr.Error(),
+				"output": string(netUseOutput),
+			}
+			continue // Skip shutdown if net use fails
+		}
+
+		// Step 2: Run shutdown command
+		shutdownCmd := exec.Command(
 			"shutdown",
 			"/s",
 			"/f",
 			"/t", "0",
-			"/m", fmt.Sprintf("\\\\%s", pc.IPAddress),
+			"/m", fmt.Sprintf(`\\%s`, pc.IPAddress),
 		)
+		shutdownOutput, shutdownErr := shutdownCmd.CombinedOutput()
 
-		output, err := cmd.CombinedOutput()
-		if err != nil {
+		if shutdownErr != nil {
 			results[pc.Name] = gin.H{
-				"status": "error",
-				"error":  err.Error(),
-				"output": string(output),
+				"status":  "shutdown failed",
+				"error":   shutdownErr.Error(),
+				"output":  string(shutdownOutput),
+				"net_use": string(netUseOutput),
 			}
 		} else {
 			results[pc.Name] = gin.H{
-				"status": "success",
-				"output": string(output),
+				"status":  "shutdown success",
+				"output":  string(shutdownOutput),
+				"net_use": string(netUseOutput),
 			}
 		}
 	}

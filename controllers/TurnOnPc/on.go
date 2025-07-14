@@ -286,6 +286,7 @@ func SendMagicPacket(mac string) error {
 	if err != nil {
 		return fmt.Errorf("error creating UDP connection: %v", err)
 	}
+	
 	defer conn.Close()
 	_, err = conn.Write(packet)
 	if err != nil {
@@ -297,7 +298,7 @@ func SendMagicPacket(mac string) error {
 func PowerOnHandler(c *gin.Context) {
 	rows, err := config.DB.Query(`
 		SELECT mac_address, ip_address, computer_name, username, password
-		FROM pcs
+		FROM pcs where status = 0
 	`)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "DB query failed: " + err.Error()})
